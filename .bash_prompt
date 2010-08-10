@@ -1,0 +1,114 @@
+__vcs_dir() {
+  _bold=$(tput bold)
+  _normal=$(tput sgr0)
+  local vcs base_dir sub_dir ref
+  git_dir() {
+    base_dir=$(git-rev-parse --show-cdup 2>/dev/null) || return 1
+    base_dir=$(stat -f "$base_dir/..")
+    sub_dir=$(git-rev-parse --show-prefix)
+    sub_dir=${sub_dir%/}
+    ref=$(git-symbolic-ref -q HEAD || git-name-rev --name-only HEAD 2>/dev/null)
+    ref=${ref#refs/heads/}
+    vcs="git"
+    pr='('$vcs'|'$ref')'
+  }
+
+  git_dir_buildin() {
+    pr=$(__git_ps1)
+    if [ !$pr ]; then 
+        return 1 
+    fi;
+  }
+
+  sub_dir() {
+    local sub_dir
+    sub_dir=$(stat -f "${PWD}")
+    sub_dir=${sub_dir#$1}
+    echo ${sub_dir#/}
+  }
+
+  svn_dir() {
+    [ -d ".svn" ] || return 1
+    base_dir="."
+    while [ -d "$base_dir/../.svn" ]; do base_dir="$base_dir/.."; done
+    base_dir=$(stat -f "$base_dir")
+    sub_dir=$(sub_dir "${base_dir}")
+    ref=$(svn info "$base_dir" | awk '/^URL/ { sub(".*/","",$0); r=$0 } /^Revision/ { sub("[^0-9]*","",$0); print r":"$0 }')
+    vcs="svn"
+    pr='('$vcs'|'$ref')'
+}
+
+  svk_dir() {
+    [ -f ~/.svk/config ] || return 1
+    base_dir=$(awk '/: *$/ { sub(/^ */,"",$0); sub(/: *$/,"",$0); if (match("'${PWD}'", $0?(/|$)")) { print $0; d=1; } } /depotpath/ && d == 1 { sub(".*/","",$0); r=$0 } /revision/ && d == 1 { print r ":" $2; exit 1 }' ~/.svk/config) && return 1
+    ref=${base_dir##*}
+    base_dir=${base_dir%%*}
+    sub_dir=$(sub_dir "${base_dir}")
+    vcs="svk"
+    pr='('$vcs'|'$ref')'
+  }
+
+  hg_dir() {
+    hg_root=$(hg root 2>&1 | egrep -v "$abort:");
+    if [ $hg_root ]; then
+      base_dir=$hg_root
+      sub_dir=$(sub_dir base_dir)
+      hg_branch=$(hg branch);
+      vcs="hg"
+      ref=$hg_branch
+      pr='('$vcs'|'$ref')'
+    else
+      return 1
+    fi;
+  }
+
+  # uncomment in case if no git-completion is avaliable
+  #git_dir ||
+  # comment in case if no git-completion is avaliable
+  git_dir_buildin ||
+  svn_dir ||
+  svk_dir ||
+  hg_dir ||
+  base_dir="$PWD"
+
+  #echo "${vcs:+($vcs)}${_bold}${base_dir/$HOME/~}${_normal}${vcs:+[$ref]${_bold}${sub_dir}${_normal}}"
+  echo "$pr"
+}
+
+txtblk='\e[0;30m' # Black - Regular
+txtred='\e[0;31m' # Red
+txtgrn='\e[0;32m' # Green
+txtylw='\e[0;33m' # Yellow
+txtblu='\e[0;34m' # Blue
+txtpur='\e[0;35m' # Purple
+txtcyn='\e[0;36m' # Cyan
+txtwht='\e[0;37m' # White
+bldblk='\e[1;30m' # Black - Bold
+bldred='\e[1;31m' # Red
+bldgrn='\e[1;32m' # Green
+bldylw='\e[1;33m' # Yellow
+bldblu='\e[1;34m' # Blue
+bldpur='\e[1;35m' # Purple
+bldcyn='\e[1;36m' # Cyan
+bldwht='\e[1;37m' # White
+unkblk='\e[4;30m' # Black - Underline
+undred='\e[4;31m' # Red
+undgrn='\e[4;32m' # Green
+undylw='\e[4;33m' # Yellow
+undblu='\e[4;34m' # Blue
+undpur='\e[4;35m' # Purple
+undcyn='\e[4;36m' # Cyan
+undwht='\e[4;37m' # White
+bakblk='\e[40m'   # Black - Background
+bakred='\e[41m'   # Red
+badgrn='\e[42m'   # Green
+bakylw='\e[43m'   # Yellow
+bakblu='\e[44m'   # Blue
+bakpur='\e[45m'   # Purple
+bakcyn='\e[46m'   # Cyan
+bakwht='\e[47m'   # White
+txtrst='\e[0m'    # Text Reset
+# git showing branch name in promt
+#export PS1='\u@\h:\w''$(__vcs_dir " (%s)")''\$ '
+
+export PS1="\u\[$txtpur\]@\[$txtrst\]\h\[$txtpur\]:\[$txtrst\]\w\[$txtpur\]"'$(__vcs_dir "(%s)")'"\$ \[$txtrst\]"
