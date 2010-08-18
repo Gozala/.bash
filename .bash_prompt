@@ -2,22 +2,37 @@ __vcs_dir() {
   _bold=$(tput bold)
   _normal=$(tput sgr0)
   local vcs base_dir sub_dir ref
-  git_dir() {
-    base_dir=$(git-rev-parse --show-cdup 2>/dev/null) || return 1
-    base_dir=$(stat -f "$base_dir/..")
-    sub_dir=$(git-rev-parse --show-prefix)
-    sub_dir=${sub_dir%/}
-    ref=$(git-symbolic-ref -q HEAD || git-name-rev --name-only HEAD 2>/dev/null)
-    ref=${ref#refs/heads/}
-    vcs="git"
-    pr='('$vcs'|'$ref')'
-  }
 
-  git_dir_buildin() {
-    pr=$(__git_ps1)
-    if [ !$pr ]; then 
-        return 1 
-    fi;
+  git_dir() {
+    if type -p __git_ps1; then
+      branch=$(__git_ps1 '%s')
+    else
+      branch=$(git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
+    fi
+    if [ $branch ]; then
+      # not updated
+      pr="${txtpur}($branch)${txtrst}"
+
+      status=$(git status --porcelain 2> /dev/null)
+      # if we have non untracked files (blue)
+      if $(echo "$status" | grep '?? ' &> /dev/null); then
+        pr="${txtblu}($branch)${txtrst}"
+      fi
+      #  added to index (green)
+      if $(echo "$status" | grep '^A  ' &> /dev/null); then
+        pr="${txtgrn}($branch)${txtgrn}"
+      fi
+      # updated in index (yellow)
+      if $(echo "$status" | grep '^ M ' &> /dev/null); then
+        pr="${txtcyn}($branch)${txtrst}"
+      fi
+      #  deleted from index (red)
+      if $(echo "$status" | grep '^ D ' &> /dev/null); then
+        pr="${txtred}($branch)${txtrst}"
+      fi
+    else
+      return 1
+    fi
   }
 
   sub_dir() {
@@ -35,7 +50,7 @@ __vcs_dir() {
     sub_dir=$(sub_dir "${base_dir}")
     ref=$(svn info "$base_dir" | awk '/^URL/ { sub(".*/","",$0); r=$0 } /^Revision/ { sub("[^0-9]*","",$0); print r":"$0 }')
     vcs="svn"
-    pr='('$vcs'|'$ref')'
+    pr="($vcs|$ref)"
 }
 
   svk_dir() {
@@ -45,7 +60,7 @@ __vcs_dir() {
     base_dir=${base_dir%%*}
     sub_dir=$(sub_dir "${base_dir}")
     vcs="svk"
-    pr='('$vcs'|'$ref')'
+    pr="($vcs|$ref)"
   }
 
   hg_dir() {
@@ -56,23 +71,20 @@ __vcs_dir() {
       hg_branch=$(hg branch);
       vcs="hg"
       ref=$hg_branch
-      pr='('$vcs'|'$ref')'
+      pr="($vcs|$ref)"
     else
       return 1
     fi;
   }
-
-  # uncomment in case if no git-completion is avaliable
-  #git_dir ||
   # comment in case if no git-completion is avaliable
-  git_dir_buildin ||
+  git_dir ||
   svn_dir ||
   svk_dir ||
   hg_dir ||
   base_dir="$PWD"
 
   #echo "${vcs:+($vcs)}${_bold}${base_dir/$HOME/~}${_normal}${vcs:+[$ref]${_bold}${sub_dir}${_normal}}"
-  echo "$pr"
+  echo -e $pr
 }
 
 txtblk='\e[0;30m' # Black - Regular
@@ -107,8 +119,8 @@ bakblu='\e[44m'   # Blue
 bakpur='\e[45m'   # Purple
 bakcyn='\e[46m'   # Cyan
 bakwht='\e[47m'   # White
-txtrst='\e[0m'    # Text Reset
+txtrst='\e[m'   # Text Reset
 # git showing branch name in promt
 #export PS1='\u@\h:\w''$(__vcs_dir " (%s)")''\$ '
+export PS1="\u${txtpur}@${txtrst}\h${txtpur}:${txtrst}\w"'$(__vcs_dir)'"${txtpur}\$ ${txtrst}"
 
-export PS1="\u\[$txtpur\]@\[$txtrst\]\h\[$txtpur\]:\[$txtrst\]\w\[$txtpur\]"'$(__vcs_dir "(%s)")'"\$ \[$txtrst\]"
