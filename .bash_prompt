@@ -122,5 +122,5 @@ bakwht='\e[47m'   # White
 txtrst='\e[m'   # Text Reset
 # git showing branch name in promt
 #export PS1='\u@\h:\w''$(__vcs_dir " (%s)")''\$ '
-export PS1="\u${txtpur}@${txtrst}\h${txtpur}:${txtrst}\w"'$(__vcs_dir)'"${txtpur}\$ ${txtrst}"
+export PS1="\[\u${txtpur}@${txtrst}\h${txtpur}:${txtrst}\w"'$(__vcs_dir)'"${txtpur}\$ ${txtrst}\]"
 
