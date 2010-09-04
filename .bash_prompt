@@ -16,7 +16,7 @@ __vcs_status() {
     if $(echo "$status" | grep '^A  ' &> /dev/null); then
       color="${txtgrn}"
     fi
-    # updated in index (yellow)
+    # updated in index (Cyan)
     if $(echo "$status" | grep '^ M ' &> /dev/null); then
       color="${txtcyn}"
     fi
