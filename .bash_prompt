@@ -132,3 +132,5 @@ txtrst='\033[m'   # Text Reset
 #export PS1='\u@\h:\w''$(__git_ps1 " (%s)")''\$ '
 export PS1="\u\[${txtpur}\]@\[${txtrst}\]\h\[${txtpur}\]:\[${txtrst}\]\w\["'$(__vcs_status)'"\]"'$(__vcs_branch)'"\[${txtrst}\]\[${txtpur}\]\$ \[${txtrst}\]"
 
+# vim:ft=sh
+
